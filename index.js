@@ -2,9 +2,11 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
+const publicDir = path.join(__dirname, 'public');
+
 // Create a server
 const server = http.createServer((req, res) => {
-    if (req.url.match(/\/api\/v1\/[^/]+\/actions\/blueprints\/[^/]+\/graph/)  && req.method === 'GET') {
+    if (req.url.match(/\/api\/v1\/[^/]+\/actions\/blueprints\/[^/]+\/graph/) && req.method === 'GET') {
         const filePath = path.join(__dirname, 'graph.json');
 
         // Read the graph.json file
@@ -18,9 +20,23 @@ const server = http.createServer((req, res) => {
             res.end(data);
         });
     } else {
-        // Handle 404 for other routes
-        res.writeHead(404, {'Content-Type': 'application/json'});
-        res.end(JSON.stringify({error: 'Resource not found!'}));
+        // Serve static files from /public
+        let filePath = path.join(publicDir, req.url === '/' ? 'index.html' : req.url);
+        fs.readFile(filePath, (err, content) => {
+            if (err) {
+                res.writeHead(404, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({error: 'Resource not found!'}));
+                return;
+            }
+            // Basic content type handling
+            let ext = path.extname(filePath);
+            let contentType = 'text/html';
+            if (ext === '.js') contentType = 'application/javascript';
+            if (ext === '.css') contentType = 'text/css';
+            if (ext === '.json') contentType = 'application/json';
+            res.writeHead(200, {'Content-Type': contentType});
+            res.end(content);
+        });
     }
 });
 
